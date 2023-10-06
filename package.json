@@ -3,9 +3,6 @@
   "version": "0.4.0",
   "description": "Basic CHAP, MS-CHAP and MS-CHAPv2 authentication and MPPE methods.",
   "main": "./lib/chap",
-  "devDependencies": {
-    "mocha": "~2.2.4"
-  },
   "scripts": {
     "test": "mocha --reporter spec tests/*.test.js"
   },
@@ -23,5 +20,16 @@
     "mschap2",
     "mppe"
   ],
-  "author": "Peter Harris <codeanimal@outlook.com>"
+  "author": "Peter Harris <codeanimal@outlook.com>",
+  "devDependencies": {
+    "@tsconfig/node16": "^16.1.1",
+    "@types/node": "^20.8.2",
+    "mocha": "~2.2.4",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "crypto-js": "^4.1.1",
+    "js-md4": "^0.3.2",
+    "ts-node": "^10.9.1"
+  }
 }

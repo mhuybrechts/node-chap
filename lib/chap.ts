@@ -1,5 +1,6 @@
-﻿/// <reference path="../typings/node/node.d.ts" />
+﻿const CryptoJS = require("crypto-js");
 import crypto = require("crypto");
+const md4 = require('js-md4')
 
 module chap {
   export type Password = string|Buffer;
@@ -40,10 +41,27 @@ module chap {
     export function NtPasswordHash(password: Password): Buffer {
       var passwordBuffer: Buffer = new Buffer(<string>password, "utf16le");
 
-      var md4 = crypto.createHash("md4");
-      md4.update(passwordBuffer);
+      var md4Hash
+      // md4Hash = crypto.createHash("md4");
+      // md4Hash.update(passwordBuffer);
+      // let m1 = md4Hash.digest();
+      //
+      // md4Hash = md4.create()
+      // md4Hash.update(passwordBuffer);
+      // let m2 = Buffer.from(md4Hash.arrayBuffer())
+      // console.log(m1.toJSON(), m2.toJSON());
+      // 20231003 mrh: these are equal
 
-      return md4.digest();
+      try {
+        md4Hash = crypto.createHash("md4");
+        md4Hash.update(passwordBuffer);
+
+        return md4Hash.digest();
+      } catch (e) {
+        md4Hash = md4.create()
+        md4Hash.update(passwordBuffer);
+        return Buffer.from(md4Hash.arrayBuffer())
+      }
     }
 
     export function LmChallengeResponse(challenge: Buffer, password: string): Buffer {
@@ -81,10 +99,35 @@ module chap {
     }
 
     export function DesEncrypt(clear: Buffer, key: Buffer): Buffer {
-      var des = crypto.createCipheriv("des-ecb", _ParityKey(key), new Buffer(0));
-      des.setAutoPadding(false);
 
-      return Buffer.concat([des.update(clear), des.final()]);
+      try {
+        var des = crypto.createCipheriv("des-ecb", _ParityKey(key), new Buffer(0));
+        des.setAutoPadding(false);
+
+        return Buffer.concat([des.update(clear), des.final()]);
+      } catch (e) {
+        const encObject = CryptoJS.DES.encrypt(
+          CryptoJS.enc.Base64.parse(clear.toString('base64')),
+          CryptoJS.enc.Base64.parse(_ParityKey(key).toString('base64')),
+          {
+            mode: CryptoJS.mode.ECB,
+            padding: CryptoJS.pad.NoPadding,
+          }
+        )
+        // @ts-ignore
+        const encrypted = encObject.ciphertext.toString(CryptoJS.enc.Base64)
+
+//console.log('DesEncryptLib', encrypted)
+        return Buffer.from(encrypted, 'base64')
+
+        // return Buffer.from(
+        //   CryptoJS.DES.encrypt(
+        //     CryptoJS.lib.WordArray.create(clear),
+        //     CryptoJS.lib.WordArray.create(_ParityKey(key)),
+        //     { mode: CryptoJS.mode.ECB, padding: CryptoJS.pad.Pkcs7 }
+        //   ).toString()
+        // )
+      }
     }
 
     function _ParityKey(key: Buffer): Buffer {
@@ -236,7 +279,7 @@ module chap {
      * @param username                Username max length is 256 ASCII characters.
      * @returns {string}              The authenticator response as "S=" followed by 40 hexadecimal digits.
      */
-    export function GenerateAuthenticatorResponse(password: string, NT_response: Buffer, peer_challenge: Buffer, authenticator_challenge: Buffer, username: string): string {
+    export function GenerateAuthenticatorResponse(password: string, NT_response: Buffer, peer_challenge: Buffer, authenticator_challenge: Buffer, username: string): string | null {
       password = password || "";
       username = username || "";
 
